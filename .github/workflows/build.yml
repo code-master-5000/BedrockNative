@@ -1,0 +1,30 @@
+
+name: Build Bedrock Native
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Download source
+        uses: actions/checkout@v4
+
+      - name: Set up C++ compiler
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: amd64
+
+      - name: Compile Windows EXE
+        shell: cmd
+        run: cl /nologo /EHsc /std:c++17 main.cpp /Fe:main.exe
+
+      - name: Upload executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: BedrockNative-Windows
+          path: main.exe
+          if-no-files-found: error
