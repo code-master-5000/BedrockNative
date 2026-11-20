@@ -1,6 +1,9 @@
 
 #include <windows.h>
 
+bool outlineEnabled = true;
+bool wasF9Down = false;
+
 #pragma comment(lib, "user32.lib")
 #pragma comment(lib, "gdi32.lib")
 
@@ -9,6 +12,22 @@ const COLORREF transparentColor = RGB(1, 2, 3);
 LRESULT CALLBACK WindowProc(
     HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 {
+        if (msg == WM_TIMER)
+    {
+        bool f9Down =
+            (GetAsyncKeyState(VK_F9) & 0x8000) != 0;
+
+        if (f9Down && !wasF9Down)
+        {
+            outlineEnabled = !outlineEnabled;
+
+            // Redraw the overlay.
+            InvalidateRect(hwnd, nullptr, FALSE);
+        }
+
+        wasF9Down = f9Down;
+        return 0;
+    }
     if (msg == WM_PAINT)
     {
         PAINTSTRUCT ps;
@@ -22,19 +41,21 @@ LRESULT CALLBACK WindowProc(
         DeleteObject(background);
 
         // Bright green test outline.
-        HPEN pen = CreatePen(PS_SOLID, 3, RGB(0, 255, 100));
-        HGDIOBJ oldPen = SelectObject(dc, pen);
-        HGDIOBJ oldBrush =
-            SelectObject(dc, GetStockObject(NULL_BRUSH));
+        if (outlineEnabled){
+            HPEN pen = CreatePen(PS_SOLID, 3, RGB(0, 255, 100));
+            HGDIOBJ oldPen = SelectObject(dc, pen);
+            HGDIOBJ oldBrush =
+                SelectObject(dc, GetStockObject(NULL_BRUSH));
 
-        Rectangle(dc, 150, 80, 300, 260);
+            Rectangle(dc, 150, 80, 300, 260);
 
-        SelectObject(dc, oldBrush);
-        SelectObject(dc, oldPen);
-        DeleteObject(pen);
+            SelectObject(dc, oldBrush);
+            SelectObject(dc, oldPen);
+            DeleteObject(pen);
 
-        EndPaint(hwnd, &ps);
-        return 0;
+            EndPaint(hwnd, &ps);
+            return 0;
+        }
     }
 
     return DefWindowProcW(hwnd, msg, wp, lp);
@@ -78,6 +99,7 @@ int WINAPI WinMain(
     );
 
     ShowWindow(window, SW_SHOW);
+    SetTimer(window, 1, 30, nullptr);
 
     MSG message;
     while (GetMessageW(&message, nullptr, 0, 0) > 0)
