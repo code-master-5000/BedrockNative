@@ -3,6 +3,44 @@
 #include <iostream>
 #include <string>
 
+// Our native module states
+bool hitboxesEnabled = false;
+bool espEnabled = false;
+
+void ProcessCommand(const std::string& command)
+{
+    if (command == "HITBOXES_ON")
+        hitboxesEnabled = true;
+
+    else if (command == "HITBOXES_OFF")
+        hitboxesEnabled = false;
+
+    else if (command == "ESP_ON")
+        espEnabled = true;
+
+    else if (command == "ESP_OFF")
+        espEnabled = false;
+
+    else
+    {
+        std::cout << "Unknown command: "
+                  << command << "\n";
+        return;
+    }
+
+    std::cout << "\n--- Bedrock Native State ---\n";
+
+    std::cout << "Hitboxes: "
+              << (hitboxesEnabled ? "ON" : "OFF")
+              << "\n";
+
+    std::cout << "ESP Mode: "
+              << (espEnabled ? "ON" : "OFF")
+              << "\n";
+
+    std::cout << "----------------------------\n";
+}
+
 int main()
 {
     std::cout << "Bedrock Native Bridge started!\n";
@@ -24,7 +62,8 @@ int main()
 
         if (pipe == INVALID_HANDLE_VALUE)
         {
-            std::cout << "Failed to create pipe.\n";
+            std::cout << "Pipe creation failed: "
+                      << GetLastError() << "\n";
             return 1;
         }
 
@@ -52,8 +91,7 @@ int main()
             ))
             {
                 std::string command(buffer, bytesRead);
-                std::cout << "Received: "
-                            << command << "\n";
+                ProcessCommand(command);
             }
         }
 
