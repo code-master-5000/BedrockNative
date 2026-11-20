@@ -26,6 +26,11 @@ jobs:
         shell: cmd
         run: cl /nologo /EHsc /std:c++17 render_test.cpp /Fe:render_test.exe user32.lib gdi32.lib
 
+      - name: Build memory test
+        shell: cmd
+        run: cl /nologo /EHsc /std:c++17 memory_test.cpp /Fe:memory_test.exe
+
+
       - name: Upload executables
         uses: actions/upload-artifact@v4
         with:
