@@ -18,13 +18,19 @@ jobs:
         with:
           arch: amd64
 
-      - name: Compile Windows EXE
+      - name: Compile native bridge
         shell: cmd
         run: cl /nologo /EHsc /std:c++17 main.cpp /Fe:main.exe
 
-      - name: Upload executable
+      - name: Build rendering test
+        shell: cmd
+        run: cl /nologo /EHsc /std:c++17 render_test.cpp /Fe:render_test.exe user32.lib gdi32.lib
+
+      - name: Upload executables
         uses: actions/upload-artifact@v4
         with:
           name: BedrockNative-Windows
-          path: main.exe
+          path: |
+            main.exe
+            render_test.exe
           if-no-files-found: error
