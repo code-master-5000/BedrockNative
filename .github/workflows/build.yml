@@ -20,7 +20,7 @@ jobs:
 
       - name: Compile native bridge
         shell: cmd
-        run: cl /nologo /EHsc /std:c++17 main.cpp /Fe:main.exe
+        run: cl /nologo /EHsc /std:c++17 main.cpp MemoryReader.cpp /Fe:main.exe
 
       - name: Build rendering test
         shell: cmd
