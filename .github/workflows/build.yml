@@ -31,6 +31,12 @@ jobs:
         run: cl /nologo /EHsc /std:c++17 memory_test.cpp /Fe:memory_test.exe
 
 
+      - name: Compile MemoryReader class
+        shell: cmd
+        run: cl /nologo /EHsc /std:c++17 /c MemoryReader.cpp
+
+
+
       - name: Upload executables
         uses: actions/upload-artifact@v4
         with:
