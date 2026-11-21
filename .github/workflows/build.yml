@@ -83,6 +83,9 @@ jobs:
         shell: cmd
         run: cl /nologo /EHsc /std:c++17 remote_pointer_test.cpp MemoryReader.cpp /Fe:remote_pointer_test.exe
 
+      - name: Build pointer module test
+        shell: cmd
+        run: cl /nologo /EHsc /std:c++17 pointer_module_test.cpp /Fe:pointer_module_test.exe
 
       - name: Upload executables
         uses: actions/upload-artifact@v4
@@ -102,4 +105,5 @@ jobs:
             code_scan_test.exe
             module_scan_test.exe
             remote_pointer_test.exe
+            pointer_module_test.exe
           if-no-files-found: error
