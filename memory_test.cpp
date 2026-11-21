@@ -3,6 +3,7 @@
 #include <tlhelp32.h>
 #include <iostream>
 #include <cwchar>
+#include <cstdint>
 
 int main()
 {
@@ -83,9 +84,7 @@ int main()
         MODULEENTRY32W module = {};
         module.dwSize = sizeof(module);
 
-        if (Module32FirstW(modules, &module))
-        {
-            unsigned char bytes[2] = {};
+        Module32FirstW
             SIZE_T bytesRead = 0;
 
             BOOL success = ReadProcessMemory(
