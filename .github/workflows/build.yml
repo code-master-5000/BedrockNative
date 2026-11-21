@@ -41,6 +41,10 @@ jobs:
         run: cl /nologo /EHsc /std:c++17 reader_test.cpp MemoryReader.cpp /Fe:reader_test.exe
 
 
+      - name: Build memory scanner
+        shell: cmd
+        run: cl /nologo /EHsc /std:c++17 memory_scanner.cpp /Fe:memory_scanner.exe
+
 
       - name: Upload executables
         uses: actions/upload-artifact@v4
@@ -51,4 +55,5 @@ jobs:
             render_test.exe
             memory_test.exe
             reader_test.exe
+            memory_scanner.exe
           if-no-files-found: error
