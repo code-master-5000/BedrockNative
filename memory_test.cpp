@@ -84,58 +84,59 @@ int main()
         MODULEENTRY32W module = {};
         module.dwSize = sizeof(module);
 
-        
-MODULEENTRY32W module = {};
-module.dwSize = sizeof(module);
+        if (Module32FirstW(modules, &module))
+        {
+            std::cout << "Module base: 0x"
+                      << std::hex
+                      << reinterpret_cast<uintptr_t>(
+                          module.modBaseAddr
+                      )
+                      << std::dec << "\n";
 
-if (Module32FirstW(modules, &module))
-{
-    std::cout << "Module base: 0x"
-              << std::hex
-              << reinterpret_cast<uintptr_t>(module.modBaseAddr)
-              << std::dec << "\n";
+            std::cout << "Module size: "
+                      << module.modBaseSize
+                      << " bytes\n";
 
-    std::cout << "Module size: "
-              << module.modBaseSize
-              << " bytes\n";
+            unsigned char bytes[2] = {};
+            SIZE_T bytesRead = 0;
 
-    unsigned char bytes[2] = {};
-    SIZE_T bytesRead = 0;
+            BOOL success = ReadProcessMemory(
+                process,
+                module.modBaseAddr,
+                bytes,
+                sizeof(bytes),
+                &bytesRead
+            );
 
-    BOOL success = ReadProcessMemory(
-        process,
-        module.modBaseAddr,
-        bytes,
-        sizeof(bytes),
-        &bytesRead
-    );
+            if (success && bytesRead == sizeof(bytes))
+            {
+                std::cout << "Memory read SUCCESS!\n";
+                std::cout << std::hex;
+                std::cout << "First bytes: "
+                          << static_cast<int>(bytes[0])
+                          << " "
+                          << static_cast<int>(bytes[1])
+                          << std::dec << "\n";
+            }
+            else
+            {
+                std::cout << "Memory read FAILED: "
+                          << GetLastError() << "\n";
+            }
+        }
+        else
+        {
+            std::cout << "Module enumeration failed: "
+                      << GetLastError() << "\n";
+        }
 
-    if (success && bytesRead == sizeof(bytes))
-    {
-        std::cout << "Memory read SUCCESS!\n";
-        std::cout << std::hex;
-        std::cout << "First bytes: "
-                  << static_cast<int>(bytes[0])
-                  << " "
-                  << static_cast<int>(bytes[1])
-                  << std::dec << "\n";
+        CloseHandle(modules);
     }
-    else
-    {
-        std::cout << "Memory read FAILED: "
-                  << GetLastError() << "\n";
-    }
-}
-else
-{
-    std::cout << "Module enumeration failed: "
-              << GetLastError() << "\n";
-}
-
 
     CloseHandle(process);
 
     std::cout << "\nTest complete.\n";
     std::cin.get();
+
     return 0;
 }
