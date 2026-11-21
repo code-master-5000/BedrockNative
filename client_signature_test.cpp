@@ -39,10 +39,49 @@ int main()
 
     std::cout << "Scanning Minecraft .text...\n";
 
-    auto matches = ModuleScanner::ScanText(
-        reader,
-        pattern
-    );
+    
+SignatureScanner::Pattern shortPattern = {
+    0x48, 0x8B, 0x15,
+    -1, -1, -1, -1
+};
+
+SignatureScanner::Pattern mediumPattern = {
+    0x48, 0x8B, 0x15,
+    -1, -1, -1, -1,
+    0x4C, 0x8B, 0x02
+};
+
+SignatureScanner::Pattern longerPattern = {
+    0x48, 0x8B, 0x15,
+    -1, -1, -1, -1,
+    0x4C, 0x8B, 0x02,
+    0x4C, 0x89, 0x06
+};
+
+auto testPattern = [&](const char* name,
+                       const SignatureScanner::Pattern& p)
+{
+    auto matches = ModuleScanner::ScanText(reader, p);
+
+    std::cout << name << ": "
+              << std::dec << matches.size()
+              << " matches\n";
+
+    // Print only the first five candidate addresses.
+    for (size_t i = 0; i < matches.size() && i < 5; ++i)
+    {
+        std::cout << "  RVA: 0x"
+                  << std::hex
+                  << (matches[i] - reader.GetBaseAddress())
+                  << "\n";
+    }
+};
+
+testPattern("7-byte pattern", shortPattern);
+testPattern("10-byte pattern", mediumPattern);
+testPattern("13-byte pattern", longerPattern);
+testPattern("29-byte pattern", pattern);
+
 
     std::cout << std::dec
               << "Matches found: "
