@@ -84,41 +84,54 @@ int main()
         MODULEENTRY32W module = {};
         module.dwSize = sizeof(module);
 
-        Module32FirstW
-            SIZE_T bytesRead = 0;
+        
+MODULEENTRY32W module = {};
+module.dwSize = sizeof(module);
 
-            BOOL success = ReadProcessMemory(
-                process,
-                module.modBaseAddr,
-                bytes,
-                sizeof(bytes),
-                &bytesRead
-            );
+if (Module32FirstW(modules, &module))
+{
+    std::cout << "Module base: 0x"
+              << std::hex
+              << reinterpret_cast<uintptr_t>(module.modBaseAddr)
+              << std::dec << "\n";
 
-            if (success && bytesRead == sizeof(bytes))
-            {
-                std::cout << "Memory read SUCCESS!\n";
-                std::cout << std::hex;
-                std::cout << "First bytes: "
-                          << static_cast<int>(bytes[0])
-                          << " "
-                          << static_cast<int>(bytes[1])
-                          << std::dec << "\n";
-            }
-            else
-            {
-                std::cout << "Memory read FAILED: "
-                          << GetLastError() << "\n";
-            }
-        }
-        else
-        {
-            std::cout << "Module enumeration failed: "
-                      << GetLastError() << "\n";
-        }
+    std::cout << "Module size: "
+              << module.modBaseSize
+              << " bytes\n";
 
-        CloseHandle(modules);
+    unsigned char bytes[2] = {};
+    SIZE_T bytesRead = 0;
+
+    BOOL success = ReadProcessMemory(
+        process,
+        module.modBaseAddr,
+        bytes,
+        sizeof(bytes),
+        &bytesRead
+    );
+
+    if (success && bytesRead == sizeof(bytes))
+    {
+        std::cout << "Memory read SUCCESS!\n";
+        std::cout << std::hex;
+        std::cout << "First bytes: "
+                  << static_cast<int>(bytes[0])
+                  << " "
+                  << static_cast<int>(bytes[1])
+                  << std::dec << "\n";
     }
+    else
+    {
+        std::cout << "Memory read FAILED: "
+                  << GetLastError() << "\n";
+    }
+}
+else
+{
+    std::cout << "Module enumeration failed: "
+              << GetLastError() << "\n";
+}
+
 
     CloseHandle(process);
 
