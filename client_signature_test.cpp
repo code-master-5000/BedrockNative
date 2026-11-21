@@ -129,6 +129,23 @@ std::cout << "  Referenced address: 0x"
           << std::hex << target << "\n";
 
 std::cout << "  Referenced RVA: 0x"
+
+uint64_t storedValue = 0;
+
+if (reader.Read(
+        target,
+        &storedValue,
+        sizeof(storedValue)))
+{
+    std::cout << "  Stored 8-byte value: 0x"
+              << std::hex
+              << storedValue << "\n";
+}
+else
+{
+    std::cout << "  Referenced memory unreadable.\n";
+}
+
           << std::hex
           << target - reader.GetBaseAddress()
           << "\n";
