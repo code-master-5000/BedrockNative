@@ -82,23 +82,8 @@ testPattern("10-byte pattern", mediumPattern);
 testPattern("13-byte pattern", longerPattern);
 testPattern("29-byte pattern", pattern);
 
+reader.Detach();
 
-    std::cout << std::dec
-              << "Matches found: "
-              << matches.size() << "\n";
-
-    for (uintptr_t address : matches)
-    {
-        std::cout << "Match: 0x"
-                  << std::hex << address << "\n";
-
-        std::cout << "RVA: 0x"
-                  << address - reader.GetBaseAddress()
-                  << "\n";
-    }
-
-    reader.Detach();
-
-    std::cout << "SCAN COMPLETE!\n";
-    return 0;
+std::cout << "SCAN COMPLETE!\n";
+return 0;
 }
