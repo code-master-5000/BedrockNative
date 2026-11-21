@@ -139,7 +139,7 @@ SIZE_T FilterCandidates(
     int scanNumber)
 {
     const unsigned char expected =
-        (scanNumber % 2 == 1) ? 0 : 1;
+    (scanNumber % 2 == 1) ? 1 : 0;
 
     SIZE_T total = 0;
 
@@ -162,8 +162,8 @@ SIZE_T FilterCandidates(
             // Baseline was ON. Find 1 -> 0 changes.
             for (size_t i = 0; i < current.size(); ++i)
             {
-                if (block.baseline[i] == 1 &&
-                    current[i] == 0)
+                if (block.baseline[i] == 0 &&
+    current[i] == 1)
                 {
                     block.candidates.push_back(i);
                 }
@@ -241,7 +241,7 @@ int main()
     }
 
     std::cout << "Minecraft PID: " << pid << "\n";
-    std::cout << "Hitboxes must be ON now.\n";
+    std::cout << "Hitboxes must be OFF now.\n";
     std::cout << "Press ENTER to capture baseline.\n";
 
     std::string input;
@@ -260,7 +260,7 @@ int main()
 
     while (true)
     {
-        bool turnOff = (scanNumber % 2 == 0);
+        bool turnOff = (scanNumber % 2 != 0);
 
         std::cout << "\nSet Hitboxes "
                   << (turnOff ? "OFF" : "ON")
