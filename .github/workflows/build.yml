@@ -59,6 +59,12 @@ jobs:
         shell: cmd
         run: cl /nologo /EHsc /std:c++17 signature_test.cpp MemoryReader.cpp /Fe:signature_test.exe
 
+
+      - name: Build SignatureScanner class test
+        shell: cmd
+        run: cl /nologo /EHsc /std:c++17 signature_class_test.cpp SignatureScanner.cpp MemoryReader.cpp /Fe:signature_class_test.exe
+
+
       - name: Upload executables
         uses: actions/upload-artifact@v4
         with:
@@ -72,4 +78,5 @@ jobs:
             candidate_scanner.exe
             candidate_watch.exe
             signature_test.exe
+            signature_class_test.exe
           if-no-files-found: error
