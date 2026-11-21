@@ -2,6 +2,7 @@
 #include <windows.h>
 #include <iostream>
 #include <string>
+#include "MemoryReader.h"
 
 // Our native module states
 bool hitboxesEnabled = false;
@@ -43,6 +44,39 @@ void ProcessCommand(const std::string& command)
 
 int main()
 {
+
+    MemoryReader reader;
+
+    std::cout << "Connecting to Minecraft...\n";
+
+    if (reader.Attach())
+    {
+        std::cout << "Minecraft memory attached!\n";
+
+        unsigned char signature[2] = {};
+
+        if (reader.Read(
+            reader.GetBaseAddress(),
+            signature,
+            sizeof(signature)))
+        {
+            std::cout << "Memory read: "
+                      << std::hex
+                      << static_cast<int>(signature[0])
+                      << " "
+                      << static_cast<int>(signature[1])
+                      << std::dec << "\n";
+        }
+        else
+        {
+            std::cout << "Memory read failed.\n";
+        }
+    }
+    else
+    {
+        std::cout << "Minecraft not detected or access denied.\n";
+    }
+
     std::cout << "Bedrock Native Bridge started!\n";
 
     while (true)
