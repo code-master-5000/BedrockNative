@@ -6,6 +6,7 @@
 #include <iostream>
 #include <cstdint>
 #include <iomanip>
+#include "RelativeAddress.h"
 
 int main()
 {
@@ -116,6 +117,22 @@ for (size_t i = 0;
     }
 
     std::cout << "\n";
+
+uintptr_t target = RelativeAddress::Resolve(
+    shortMatches[i],
+    bytes,
+    7,
+    3
+);
+
+std::cout << "  Referenced address: 0x"
+          << std::hex << target << "\n";
+
+std::cout << "  Referenced RVA: 0x"
+          << std::hex
+          << target - reader.GetBaseAddress()
+          << "\n";
+
 }
 
 testPattern("10-byte pattern", mediumPattern);
