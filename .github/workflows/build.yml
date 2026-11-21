@@ -87,6 +87,10 @@ jobs:
         shell: cmd
         run: cl /nologo /EHsc /std:c++17 pointer_module_test.cpp /Fe:pointer_module_test.exe
 
+      - name: Build ClientInstance signature test
+        shell: cmd
+        run: cl /nologo /EHsc /std:c++17 client_signature_test.cpp MemoryReader.cpp SignatureScanner.cpp ModuleScanner.cpp /Fe:client_signature_test.exe
+
       - name: Upload executables
         uses: actions/upload-artifact@v4
         with:
@@ -106,4 +110,5 @@ jobs:
             module_scan_test.exe
             remote_pointer_test.exe
             pointer_module_test.exe
+            client_signature_test.exe
           if-no-files-found: error
