@@ -268,6 +268,39 @@ int main()
     scanTick("16-byte prefix", tick16);
     scanTick("21-byte prefix", tick21);
 
+    SignatureScanner::Pattern tick28 = {
+        0x48, 0x89, 0x5C, 0x24, -1,
+        0x55, 0x56, 0x57,
+        0x41, 0x54, 0x41, 0x55,
+        0x41, 0x56, 0x41, 0x57,
+        0x48, 0x8D, 0x6C, 0x24, -1,
+        0x48, 0x81, 0xEC, -1, -1, -1, -1
+    };
+
+    SignatureScanner::Pattern tick35 = tick28;
+
+    tick35.insert(tick35.end(), {
+        0x0F, 0x29, 0xB4, 0x24,
+        -1, -1, -1, -1
+    });
+
+    auto matches28 = ModuleScanner::ScanText(
+        reader, tick28
+    );
+
+    auto matches35 = ModuleScanner::ScanText(
+        reader, tick35
+    );
+
+    std::cout << "\nExtended tick diagnostics:\n";
+    std::cout << "28-byte prefix: "
+              << std::dec << matches28.size()
+              << " matches\n";
+
+    std::cout << "36-byte prefix: "
+              << matches35.size()
+              << " matches\n";
+
     reader.Detach();
 
     std::cout << "SCAN COMPLETE!\n";
