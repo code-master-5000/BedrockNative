@@ -5,6 +5,7 @@
 
 #include <iostream>
 #include <cstdint>
+#include <iomanip>
 
 int main()
 {
@@ -78,6 +79,45 @@ auto testPattern = [&](const char* name,
 };
 
 testPattern("7-byte pattern", shortPattern);
+
+auto shortMatches = ModuleScanner::ScanText(
+    reader,
+    shortPattern
+);
+
+std::cout << "\nFirst 5 instruction samples:\n";
+
+for (size_t i = 0;
+     i < shortMatches.size() && i < 5;
+     ++i)
+{
+    uint8_t bytes[16] = {};
+
+    if (!reader.Read(
+            shortMatches[i],
+            bytes,
+            sizeof(bytes)))
+    {
+        std::cout << "Read failed.\n";
+        continue;
+    }
+
+    std::cout << "RVA 0x"
+              << std::hex
+              << shortMatches[i] - reader.GetBaseAddress()
+              << ": ";
+
+    for (uint8_t b : bytes)
+    {
+        std::cout << std::setw(2)
+                  << std::setfill('0')
+                  << static_cast<unsigned>(b)
+                  << " ";
+    }
+
+    std::cout << "\n";
+}
+
 testPattern("10-byte pattern", mediumPattern);
 testPattern("13-byte pattern", longerPattern);
 testPattern("29-byte pattern", pattern);
