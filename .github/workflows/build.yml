@@ -91,6 +91,10 @@ jobs:
         shell: cmd
         run: cl /nologo /EHsc /std:c++17 client_signature_test.cpp MemoryReader.cpp SignatureScanner.cpp ModuleScanner.cpp /Fe:client_signature_test.exe
 
+      - name: Build memory region test
+        shell: cmd
+        run: cl /nologo /EHsc /std:c++17 memory_region_test.cpp /Fe:memory_region_test.exe
+
       - name: Upload executables
         uses: actions/upload-artifact@v4
         with:
@@ -111,4 +115,5 @@ jobs:
             remote_pointer_test.exe
             pointer_module_test.exe
             client_signature_test.exe
+            memory_region_test.exe
           if-no-files-found: error
