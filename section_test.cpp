@@ -5,6 +5,7 @@
 #include <iostream>
 #include <cstring>
 #include <cstdint>
+#include <iomanip>
 
 int main()
 {
@@ -94,10 +95,39 @@ int main()
             std::cout << "Section address: 0x"
                       << textAddress << "\n";
 
-            std::cout << std::dec
-                      << "Section size: "
-                      << section.Misc.VirtualSize
-                      << " bytes\n";
+            
+std::cout << std::dec
+          << "Section size: "
+          << section.Misc.VirtualSize
+          << " bytes\n";
+
+// Read the first 16 bytes of .text.
+unsigned char bytes[16] = {};
+
+if (reader.Read(textAddress, bytes, sizeof(bytes)))
+{
+    std::cout << "\nFirst 16 bytes of .text:\n";
+
+    for (unsigned char byte : bytes)
+    {
+        std::cout
+            << std::hex
+            << std::uppercase
+            << std::setfill('0')
+            << std::setw(2)
+            << static_cast<int>(byte)
+            << " ";
+    }
+
+    std::cout << std::dec << "\n";
+}
+else
+{
+    std::cout << "Could not read .text bytes.\n";
+}
+
+return 0;
+
 
             return 0;
         }
