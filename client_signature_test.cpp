@@ -142,6 +142,27 @@ std::cout << "  Referenced address: 0x"
             sizeof(storedValue)))
     {
         std::cout << "  Stored 8-byte value: 0x"
+
+uint8_t probe = 0;
+
+if (storedValue != 0 &&
+    storedValue <= UINTPTR_MAX &&
+    reader.Read(
+        static_cast<uintptr_t>(storedValue),
+        &probe,
+        sizeof(probe)))
+{
+    std::cout << "  Pointer target: READABLE\n";
+    std::cout << "  First byte: 0x"
+              << std::hex
+              << static_cast<unsigned>(probe)
+              << "\n";
+}
+else
+{
+    std::cout << "  Pointer target: NOT READABLE\n";
+}
+
                   << std::hex
                   << storedValue << "\n";
     }
