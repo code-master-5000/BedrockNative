@@ -38,4 +38,5 @@ jobs:
           path: |
             main.exe
             render_test.exe
+            memory_test.exe
           if-no-files-found: error
