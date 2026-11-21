@@ -68,6 +68,59 @@ int main()
     std::cout << "Memory-read permission: GRANTED\n";
     std::cout << "Process handle opened successfully.\n";
 
+    HANDLE modules = CreateToolhelp32Snapshot(
+        TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32,
+        minecraftPid
+    );
+
+    if (modules == INVALID_HANDLE_VALUE)
+    {
+        std::cout << "Module lookup failed: "
+                  << GetLastError() << "\n";
+    }
+    else
+    {
+        MODULEENTRY32W module = {};
+        module.dwSize = sizeof(module);
+
+        if (Module32FirstW(modules, &module))
+        {
+            unsigned char bytes[2] = {};
+            SIZE_T bytesRead = 0;
+
+            BOOL success = ReadProcessMemory(
+                process,
+                module.modBaseAddr,
+                bytes,
+                sizeof(bytes),
+                &bytesRead
+            );
+
+            if (success && bytesRead == sizeof(bytes))
+            {
+                std::cout << "Memory read SUCCESS!\n";
+                std::cout << std::hex;
+                std::cout << "First bytes: "
+                          << static_cast<int>(bytes[0])
+                          << " "
+                          << static_cast<int>(bytes[1])
+                          << std::dec << "\n";
+            }
+            else
+            {
+                std::cout << "Memory read FAILED: "
+                          << GetLastError() << "\n";
+            }
+        }
+        else
+        {
+            std::cout << "Module enumeration failed: "
+                      << GetLastError() << "\n";
+        }
+
+        CloseHandle(modules);
+    }
+
     CloseHandle(process);
 
     std::cout << "\nTest complete.\n";
