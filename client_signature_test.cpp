@@ -128,36 +128,25 @@ uintptr_t target = RelativeAddress::Resolve(
 std::cout << "  Referenced address: 0x"
           << std::hex << target << "\n";
 
-std::cout << "  Referenced RVA: 0x"
 
-uint64_t storedValue = 0;
-
-if (reader.Read(
-        target,
-        &storedValue,
-        sizeof(storedValue)))
-{
-    std::cout << "  Stored 8-byte value: 0x"
+    std::cout << "  Referenced RVA: 0x"
               << std::hex
-              << storedValue << "\n";
-}
-else
-{
-    std::cout << "  Referenced memory unreadable.\n";
-}
+              << (target - reader.GetBaseAddress())
+              << "\n";
 
-          << std::hex
-          << target - reader.GetBaseAddress()
-          << "\n";
+    uint64_t storedValue = 0;
 
-}
-
-testPattern("10-byte pattern", mediumPattern);
-testPattern("13-byte pattern", longerPattern);
-testPattern("29-byte pattern", pattern);
-
-reader.Detach();
-
-std::cout << "SCAN COMPLETE!\n";
-return 0;
+    if (reader.Read(
+            target,
+            &storedValue,
+            sizeof(storedValue)))
+    {
+        std::cout << "  Stored 8-byte value: 0x"
+                  << std::hex
+                  << storedValue << "\n";
+    }
+    else
+    {
+        std::cout << "  Referenced memory unreadable.\n";
+    }
 }
