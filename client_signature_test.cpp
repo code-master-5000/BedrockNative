@@ -189,6 +189,42 @@ int main()
     testPattern("13-byte pattern", longerPattern);
     testPattern("29-byte pattern", pattern);
 
+    // Historical Borion Player::tickWorld signature.
+    SignatureScanner::Pattern tickPattern = {
+        0x48, 0x89, 0x5C, 0x24, -1,
+        0x55, 0x56, 0x57,
+        0x41, 0x54,
+        0x41, 0x55,
+        0x41, 0x56,
+        0x41, 0x57,
+        0x48, 0x8D, 0x6C, 0x24, -1,
+        0x48, 0x81, 0xEC, -1, -1, -1, -1,
+        0x0F, 0x29, 0xB4, 0x24,
+        -1, -1, -1, -1,
+        0x48, 0x8B, 0x05, -1, -1, -1, -1,
+        0x48, 0x33, 0xC4,
+        0x48, 0x89, 0x45, -1,
+        0x48, 0x89, 0x55, -1,
+        0x48, 0x8B, 0xF9
+    };
+
+    auto tickMatches = ModuleScanner::ScanText(
+        reader,
+        tickPattern
+    );
+
+    std::cout << "\nHistorical Player::tickWorld matches: "
+              << std::dec << tickMatches.size()
+              << "\n";
+
+    for (uintptr_t address : tickMatches)
+    {
+        std::cout << "  Candidate RVA: 0x"
+                  << std::hex
+                  << (address - base)
+                  << "\n";
+    }
+
     reader.Detach();
 
     std::cout << "SCAN COMPLETE!\n";
