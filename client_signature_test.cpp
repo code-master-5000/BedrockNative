@@ -224,6 +224,49 @@ int main()
                   << (address - base)
                   << "\n";
     }
+    
+    // Diagnostic patterns from the historical
+    // Borion Player::tickWorld function.
+
+    SignatureScanner::Pattern tick5 = {
+        0x48, 0x89, 0x5C, 0x24, -1
+    };
+
+    SignatureScanner::Pattern tick16 = {
+        0x48, 0x89, 0x5C, 0x24, -1,
+        0x55, 0x56, 0x57,
+        0x41, 0x54,
+        0x41, 0x55,
+        0x41, 0x56,
+        0x41, 0x57
+    };
+
+    SignatureScanner::Pattern tick21 = {
+        0x48, 0x89, 0x5C, 0x24, -1,
+        0x55, 0x56, 0x57,
+        0x41, 0x54,
+        0x41, 0x55,
+        0x41, 0x56,
+        0x41, 0x57,
+        0x48, 0x8D, 0x6C, 0x24, -1
+    };
+
+    std::cout << "\nPlayer tick signature diagnostics:\n";
+
+    auto scanTick = [&](const char* label,
+                        const SignatureScanner::Pattern& p)
+    {
+        auto matches = ModuleScanner::ScanText(reader, p);
+
+        std::cout << label << ": "
+                  << std::dec
+                  << matches.size()
+                  << " matches\n";
+    };
+
+    scanTick("5-byte prefix", tick5);
+    scanTick("16-byte prefix", tick16);
+    scanTick("21-byte prefix", tick21);
 
     reader.Detach();
 
