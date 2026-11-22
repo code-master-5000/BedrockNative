@@ -95,6 +95,10 @@ jobs:
         shell: cmd
         run: cl /nologo /EHsc /std:c++17 memory_region_test.cpp /Fe:memory_region_test.exe
 
+      - name: Build player position test
+        shell: cmd
+        run: cl /nologo /EHsc /std:c++17 PlayerPositionTest.cpp MemoryReader.cpp /Fe:PlayerPositionTest.exe
+
       - name: Upload executables
         uses: actions/upload-artifact@v4
         with:
@@ -116,4 +120,5 @@ jobs:
             pointer_module_test.exe
             client_signature_test.exe
             memory_region_test.exe
+            PlayerPositionTest.exe
           if-no-files-found: error
