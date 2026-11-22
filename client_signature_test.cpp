@@ -301,6 +301,34 @@ int main()
               << matches35.size()
               << " matches\n";
 
+    
+    // Baritone Bedrock PlatformGameCore signature.
+    // Read-only scan of Minecraft's .text section.
+
+    SignatureScanner::Pattern platformPattern = {
+        0x4C, 0x89, 0x3D,
+        -1, -1, -1, -1,
+        0x4D, 0x85, 0xFF
+    };
+
+    auto platformMatches =
+        ModuleScanner::ScanText(reader, platformPattern);
+
+    std::cout << "\nPlatformGameCore signature:\n";
+
+    std::cout << "Matches: "
+              << std::dec
+              << platformMatches.size()
+              << "\n";
+
+    for (uintptr_t address : platformMatches)
+    {
+        std::cout << "Candidate RVA: 0x"
+                  << std::hex
+                  << (address - base)
+                  << "\n";
+    }
+
     reader.Detach();
 
     std::cout << "SCAN COMPLETE!\n";
