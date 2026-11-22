@@ -1,0 +1,25 @@
+name: Safe Build Diagnostic
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnostic:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: amd64
+
+      - name: Compile diagnostic
+        shell: cmd
+        run: cl /nologo /EHsc /std:c++17 diagnostic_hello.cpp /Fe:diagnostic_hello.exe
+
+      - name: Upload diagnostic
+        uses: actions/upload-artifact@v4
+        with:
+          name: BedrockNative-Diagnostic
+          path: diagnostic_hello.exe
