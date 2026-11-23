@@ -213,8 +213,105 @@ int main()
               << std::hex << stateVectorStorage
               << std::dec << "\n";
 
-    // Temporary address discovered in our live memory tests.
-    constexpr uintptr_t positionAddress = 0x4433D282820ULL;
+    // Resolve this entity's component index using EnTT's sparse set.
+    constexpr uint32_t entityMask = 0x3FFFF;
+    constexpr uintptr_t sparsePageSize = 2048;
+    constexpr uintptr_t componentPageSize = 128;
+
+    uint32_t entityIndex = entityId & entityMask;
+
+    uintptr_t sparseBegin = 0;
+    uintptr_t sparseEnd = 0;
+
+    if (!reader.Read(stateVectorStorage + 0x08,
+                     &sparseBegin, sizeof(sparseBegin)) ||
+        !reader.Read(stateVectorStorage + 0x10,
+                     &sparseEnd, sizeof(sparseEnd)) ||
+        sparseBegin == 0 ||
+        sparseEnd < sparseBegin)
+    {
+        std::cout << "Invalid sparse-page array.\n";
+        return 1;
+    }
+
+    uintptr_t sparsePageIndex = entityIndex / sparsePageSize;
+
+    if (sparsePageIndex >= (sparseEnd - sparseBegin) / 8)
+    {
+        std::cout << "Entity has no sparse page.\n";
+        return 1;
+    }
+
+    uintptr_t sparsePage = 0;
+
+    if (!reader.Read(sparseBegin + sparsePageIndex * 8,
+                     &sparsePage, sizeof(sparsePage)) ||
+        sparsePage == 0)
+    {
+        std::cout << "Sparse page is missing.\n";
+        return 1;
+    }
+
+    uint32_t sparseEntry = 0;
+
+    if (!reader.Read(
+            sparsePage + (entityIndex % sparsePageSize) * 4,
+            &sparseEntry, sizeof(sparseEntry)) ||
+        (sparseEntry & ~entityMask) != (entityId & ~entityMask))
+    {
+        std::cout << "Entity not present in position storage.\n";
+        return 1;
+    }
+
+    uintptr_t componentIndex = sparseEntry & entityMask;
+
+    std::cout << "Position component index: "
+              << componentIndex << "\n";
+
+    // EnTT stores component values in pages of 128 elements.
+    uintptr_t dataPagesBegin = 0;
+    uintptr_t dataPagesEnd = 0;
+
+    if (!reader.Read(stateVectorStorage + 0x50,
+                     &dataPagesBegin, sizeof(dataPagesBegin)) ||
+        !reader.Read(stateVectorStorage + 0x58,
+                     &dataPagesEnd, sizeof(dataPagesEnd)) ||
+        dataPagesBegin == 0 ||
+        dataPagesEnd < dataPagesBegin)
+    {
+        std::cout << "Invalid component-data pages.\n";
+        return 1;
+    }
+
+    uintptr_t dataPageIndex = componentIndex / componentPageSize;
+
+    if (dataPageIndex >= (dataPagesEnd - dataPagesBegin) / 8)
+    {
+        std::cout << "Component data page is missing.\n";
+        return 1;
+    }
+
+    uintptr_t dataPage = 0;
+
+    if (!reader.Read(dataPagesBegin + dataPageIndex * 8,
+                     &dataPage, sizeof(dataPage)) ||
+        dataPage == 0)
+    {
+        std::cout << "Cannot read component data page.\n";
+        return 1;
+    }
+
+    // StateVectorComponent = position, old position, velocity.
+    // Each Vec3 contains three floats, giving a 36-byte component.
+    constexpr uintptr_t componentStride = sizeof(Vec3) * 3;
+
+    uintptr_t positionAddress =
+        dataPage +
+        (componentIndex % componentPageSize) * componentStride;
+
+    std::cout << "Resolved position address: 0x"
+              << std::hex << positionAddress
+              << std::dec << "\n";
 
     Vec3 position{};
 
