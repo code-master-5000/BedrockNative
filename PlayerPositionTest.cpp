@@ -76,6 +76,66 @@ int main()
               << std::hex << minecraftGame
               << std::dec << "\n";
 
+
+    // Locate the client through MinecraftGame's client map.
+    uintptr_t mapHead = 0;
+    uintptr_t mapRoot = 0;
+    uintptr_t clientInstance = 0;
+    uintptr_t backPointer = 0;
+    uint64_t clientCount = 0;
+
+    if (!reader.Read(minecraftGame + 0x9D0,
+                     &mapHead, sizeof(mapHead)) ||
+        !reader.Read(minecraftGame + 0x9D8,
+                     &clientCount, sizeof(clientCount)) ||
+        mapHead == 0 || clientCount != 1)
+    {
+        std::cout << "Unexpected client map.\n";
+        return 1;
+    }
+
+    if (!reader.Read(mapHead, &mapRoot, sizeof(mapRoot)) ||
+        mapRoot == 0 || mapRoot == mapHead ||
+        !reader.Read(mapRoot + 0x38,
+                     &clientInstance, sizeof(clientInstance)) ||
+        clientInstance == 0)
+    {
+        std::cout << "Failed to locate ClientInstance.\n";
+        return 1;
+    }
+
+    // Confirm this client belongs to our MinecraftGame.
+    if (!reader.Read(clientInstance + 0x1C8,
+                     &backPointer, sizeof(backPointer)) ||
+        backPointer != minecraftGame)
+    {
+        std::cout << "ClientInstance validation failed.\n";
+        return 1;
+    }
+
+    std::cout << "ClientInstance: 0x"
+              << std::hex << clientInstance << std::dec << "\n";
+
+    // EntityContext begins at ClientInstance + 0x268.
+    // Its entity ID is at context + 0x10.
+    uint32_t entityId = 0;
+
+    if (!reader.Read(clientInstance + 0x278,
+                     &entityId, sizeof(entityId)))
+    {
+        std::cout << "Could not read player entity ID.\n";
+        return 1;
+    }
+
+    std::cout << "Local player entity ID: 0x"
+              << std::hex << entityId << std::dec << "\n";
+
+    if ((entityId & 0x3FFFF) == 0x3FFFF)
+    {
+        std::cout << "No valid local player. Enter a world.\n";
+        return 1;
+    }
+
     // Temporary address discovered in our live memory tests.
     constexpr uintptr_t positionAddress = 0x4433D282820ULL;
 
