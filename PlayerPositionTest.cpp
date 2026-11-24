@@ -328,5 +328,72 @@ int main()
     std::cout << "Y: " << position.y << '\n';
     std::cout << "Z: " << position.z << '\n';
 
+    // Enumerate live entities in StateVectorComponent storage.
+
+    uintptr_t entityPackedBegin = 0;
+    uintptr_t entityPackedEnd = 0;
+    uintptr_t entityPackedCapacity = 0;
+
+    if (!reader.Read(stateVectorStorage + 0x20,
+                     &entityPackedBegin, sizeof(entityPackedBegin)) ||
+        !reader.Read(stateVectorStorage + 0x28,
+                     &entityPackedEnd, sizeof(entityPackedEnd)) ||
+        !reader.Read(stateVectorStorage + 0x30,
+                     &entityPackedCapacity, sizeof(entityPackedCapacity)) ||
+        entityPackedBegin == 0 ||
+        entityPackedEnd < entityPackedBegin ||
+        entityPackedCapacity < entityPackedEnd ||
+        (entityPackedEnd - entityPackedBegin) % sizeof(uint32_t) != 0)
+    {
+        std::cout << "Invalid entity packed array.\n";
+        return 1;
+    }
+
+    size_t entityCount =
+        (entityPackedEnd - entityPackedBegin) / sizeof(uint32_t);
+
+    if (entityCount > 1000000)
+    {
+        std::cout << "Unexpected entity count.\n";
+        return 1;
+    }
+
+    std::cout << "\n=== LIVE ECS ENTITIES ===\n";
+
+    size_t liveCount = 0;
+
+    constexpr uint32_t tombstoneVersion = 0x3FFF;
+
+    for (size_t slot = 0; slot < entityCount; ++slot)
+    {
+        uint32_t packedId = 0;
+
+        uintptr_t address =
+            entityPackedBegin + slot * sizeof(uint32_t);
+
+        if (!reader.Read(address, &packedId, sizeof(packedId)))
+        {
+            std::cout << "Failed reading packed entity.\n";
+            return 1;
+        }
+
+        uint32_t version = packedId >> 18;
+
+        // EnTT uses this version for tombstone entries.
+        if (version == tombstoneVersion)
+            continue;
+
+        std::cout << "Slot " << std::dec << slot
+                  << ": Entity ID 0x"
+                  << std::hex
+                  << std::setw(8)
+                  << std::setfill('0')
+                  << packedId
+                  << std::setfill(' ')
+                  << std::dec << "\n";
+
+        liveCount++;
+    }
+
     return 0;
 }
