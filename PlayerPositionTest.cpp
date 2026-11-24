@@ -394,6 +394,47 @@ int main()
 
         ++liveCount;
 
+
+        // Verify this full entity ID maps back to this packed slot.
+        uint32_t packedEntityIndex = packedId & entityMask;
+
+        size_t sparsePageNumber =
+            packedEntityIndex / sparsePageSize;
+
+        size_t sparsePageCount =
+            (sparseEnd - sparseBegin) / sizeof(uintptr_t);
+
+        if (sparsePageNumber >= sparsePageCount)
+        {
+            std::cout << "  Sparse page unavailable.\n";
+            continue;
+        }
+
+        uintptr_t packedSparsePage = 0;
+
+        if (!reader.Read(
+                sparseBegin + sparsePageNumber * sizeof(uintptr_t),
+                &packedSparsePage, sizeof(packedSparsePage)) ||
+            packedSparsePage == 0)
+        {
+            std::cout << "  Sparse page read failed.\n";
+            continue;
+        }
+
+        uint32_t mappedEntry = 0;
+
+        if (!reader.Read(
+                packedSparsePage +
+                    (packedEntityIndex % sparsePageSize) * sizeof(uint32_t),
+                &mappedEntry, sizeof(mappedEntry)) ||
+            (mappedEntry & ~entityMask) != (packedId & ~entityMask) ||
+            (mappedEntry & entityMask) != slot)
+        {
+            std::cout << "  Stale or mismatched entity mapping.\n";
+            continue;
+        }
+
+
         // Find the component data page for this packed slot.
         size_t pageIndex = slot / componentPageSize;
         size_t pageCount =
