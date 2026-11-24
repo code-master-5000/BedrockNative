@@ -392,8 +392,63 @@ int main()
                   << std::setfill(' ')
                   << std::dec << "\n";
 
-        liveCount++;
+        ++liveCount;
+
+        // Find the component data page for this packed slot.
+        size_t pageIndex = slot / componentPageSize;
+        size_t pageCount =
+            (dataPagesEnd - dataPagesBegin) / sizeof(uintptr_t);
+
+        if (pageIndex >= pageCount)
+        {
+            std::cout << "  Position page unavailable.\n";
+            continue;
+        }
+
+        uintptr_t entityPage = 0;
+
+        if (!reader.Read(
+                dataPagesBegin + pageIndex * sizeof(uintptr_t),
+                &entityPage, sizeof(entityPage)) ||
+            entityPage == 0)
+        {
+            std::cout << "  Cannot read entity page.\n";
+            continue;
+        }
+
+        uintptr_t entityPositionAddress =
+            entityPage +
+            (slot % componentPageSize) * componentStride;
+
+        Vec3 entityPosition{};
+
+        if (!reader.Read(entityPositionAddress,
+                         &entityPosition,
+                         sizeof(entityPosition)))
+        {
+            std::cout << "  Cannot read entity position.\n";
+            continue;
+        }
+
+        // Check the slot wasn't replaced during the read.
+        uint32_t confirmId = 0;
+
+        if (!reader.Read(address, &confirmId, sizeof(confirmId)) ||
+            confirmId != packedId)
+        {
+            std::cout << "  Entity changed during read.\n";
+            continue;
+        }
+
+        std::cout << "  Position: "
+                  << entityPosition.x << ", "
+                  << entityPosition.y << ", "
+                  << entityPosition.z << "\n";
+
     }
+
+    std::cout << "Non-tombstone entries: "
+              << liveCount << "\n";
 
     return 0;
 }
