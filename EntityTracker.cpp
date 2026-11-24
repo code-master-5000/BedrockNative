@@ -204,7 +204,7 @@ bool EntityTracker::ReadPosition(
         (slot % ComponentPageSize) * ComponentStride;
 
     if (dataPage >
-        std::numeric_limits<uintptr_t>::max() - offset)
+        (std::numeric_limits<uintptr_t>::max)() - offset)
     {
         return false;
     }
