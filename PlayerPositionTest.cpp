@@ -2,10 +2,12 @@
 #include "ModuleScanner.h"
 #include "RelativeAddress.h"
 #include "PointerResolver.h"
+#include "EntityTracker.h"
 
 #include <cstdint>
 #include <iomanip>
 #include <iostream>
+#include <vector>
 
 struct Vec3
 {
@@ -328,168 +330,60 @@ int main()
     std::cout << "Y: " << position.y << '\n';
     std::cout << "Z: " << position.z << '\n';
 
-    // Enumerate live entities in StateVectorComponent storage.
 
-    uintptr_t entityPackedBegin = 0;
-    uintptr_t entityPackedEnd = 0;
-    uintptr_t entityPackedCapacity = 0;
+    // Enumerate entities through our reusable EntityTracker.
 
-    if (!reader.Read(stateVectorStorage + 0x20,
-                     &entityPackedBegin, sizeof(entityPackedBegin)) ||
-        !reader.Read(stateVectorStorage + 0x28,
-                     &entityPackedEnd, sizeof(entityPackedEnd)) ||
-        !reader.Read(stateVectorStorage + 0x30,
-                     &entityPackedCapacity, sizeof(entityPackedCapacity)) ||
-        entityPackedBegin == 0 ||
-        entityPackedEnd < entityPackedBegin ||
-        entityPackedCapacity < entityPackedEnd ||
-        (entityPackedEnd - entityPackedBegin) % sizeof(uint32_t) != 0)
+    EntityTracker tracker(reader);
+
+    if (!tracker.Initialize(stateVectorStorage))
     {
-        std::cout << "Invalid entity packed array.\n";
+        std::cout << "EntityTracker initialization failed.\n";
         return 1;
     }
 
-    size_t entityCount =
-        (entityPackedEnd - entityPackedBegin) / sizeof(uint32_t);
+    std::vector<TrackedEntity> entities;
+    EntityScanStats stats{};
 
-    if (entityCount > 1000000)
+    if (!tracker.Enumerate(entities, stats))
     {
-        std::cout << "Unexpected entity count.\n";
+        std::cout << "Entity enumeration failed.\n";
         return 1;
     }
 
     std::cout << "\n=== LIVE ECS ENTITIES ===\n";
 
-    size_t liveCount = 0;
-
-    constexpr uint32_t tombstoneVersion = 0x3FFF;
-
-    for (size_t slot = 0; slot < entityCount; ++slot)
+    for (const auto& entity : entities)
     {
-        uint32_t packedId = 0;
-
-        uintptr_t address =
-            entityPackedBegin + slot * sizeof(uint32_t);
-
-        if (!reader.Read(address, &packedId, sizeof(packedId)))
-        {
-            std::cout << "Failed reading packed entity.\n";
-            return 1;
-        }
-
-        uint32_t version = packedId >> 18;
-
-        // EnTT uses this version for tombstone entries.
-        if (version == tombstoneVersion)
-            continue;
-
-        std::cout << "Slot " << std::dec << slot
+        std::cout << "Slot " << std::dec << entity.slot
                   << ": Entity ID 0x"
                   << std::hex
                   << std::setw(8)
                   << std::setfill('0')
-                  << packedId
+                  << entity.id
                   << std::setfill(' ')
                   << std::dec << "\n";
 
-        ++liveCount;
-
-
-        // Verify this full entity ID maps back to this packed slot.
-        uint32_t packedEntityIndex = packedId & entityMask;
-
-        size_t sparsePageNumber =
-            packedEntityIndex / sparsePageSize;
-
-        size_t sparsePageCount =
-            (sparseEnd - sparseBegin) / sizeof(uintptr_t);
-
-        if (sparsePageNumber >= sparsePageCount)
-        {
-            std::cout << "  Sparse page unavailable.\n";
-            continue;
-        }
-
-        uintptr_t packedSparsePage = 0;
-
-        if (!reader.Read(
-                sparseBegin + sparsePageNumber * sizeof(uintptr_t),
-                &packedSparsePage, sizeof(packedSparsePage)) ||
-            packedSparsePage == 0)
-        {
-            std::cout << "  Sparse page read failed.\n";
-            continue;
-        }
-
-        uint32_t mappedEntry = 0;
-
-        if (!reader.Read(
-                packedSparsePage +
-                    (packedEntityIndex % sparsePageSize) * sizeof(uint32_t),
-                &mappedEntry, sizeof(mappedEntry)) ||
-            (mappedEntry & ~entityMask) != (packedId & ~entityMask) ||
-            (mappedEntry & entityMask) != slot)
-        {
-            std::cout << "  Stale or mismatched entity mapping.\n";
-            continue;
-        }
-
-
-        // Find the component data page for this packed slot.
-        size_t pageIndex = slot / componentPageSize;
-        size_t pageCount =
-            (dataPagesEnd - dataPagesBegin) / sizeof(uintptr_t);
-
-        if (pageIndex >= pageCount)
-        {
-            std::cout << "  Position page unavailable.\n";
-            continue;
-        }
-
-        uintptr_t entityPage = 0;
-
-        if (!reader.Read(
-                dataPagesBegin + pageIndex * sizeof(uintptr_t),
-                &entityPage, sizeof(entityPage)) ||
-            entityPage == 0)
-        {
-            std::cout << "  Cannot read entity page.\n";
-            continue;
-        }
-
-        uintptr_t entityPositionAddress =
-            entityPage +
-            (slot % componentPageSize) * componentStride;
-
-        Vec3 entityPosition{};
-
-        if (!reader.Read(entityPositionAddress,
-                         &entityPosition,
-                         sizeof(entityPosition)))
-        {
-            std::cout << "  Cannot read entity position.\n";
-            continue;
-        }
-
-        // Check the slot wasn't replaced during the read.
-        uint32_t confirmId = 0;
-
-        if (!reader.Read(address, &confirmId, sizeof(confirmId)) ||
-            confirmId != packedId)
-        {
-            std::cout << "  Entity changed during read.\n";
-            continue;
-        }
-
         std::cout << "  Position: "
-                  << entityPosition.x << ", "
-                  << entityPosition.y << ", "
-                  << entityPosition.z << "\n";
-
+                  << entity.position.x << ", "
+                  << entity.position.y << ", "
+                  << entity.position.z << "\n";
     }
 
+    std::cout << "\n=== ENTITY SCAN STATISTICS ===\n";
     std::cout << "Non-tombstone entries: "
-              << liveCount << "\n";
+              << stats.nonTombstoneEntries << "\n";
+
+    std::cout << "Successfully tracked: "
+              << entities.size() << "\n";
+
+    std::cout << "Invalid mappings: "
+              << stats.invalidMappings << "\n";
+
+    std::cout << "Position read failures: "
+              << stats.positionReadFailures << "\n";
+
+    std::cout << "Changed during read: "
+              << stats.changedDuringRead << "\n";
 
     return 0;
 }
