@@ -108,6 +108,10 @@ jobs:
         shell: cmd
         run: EntityCacheTest.exe
 
+      - name: Build process status test
+        shell: cmd
+        run: cl /nologo /EHsc /std:c++17 ProcessStatusTest.cpp MemoryReader.cpp /Fe:ProcessStatusTest.exe
+
       - name: Upload executables
         uses: actions/upload-artifact@v4
         with:
@@ -130,4 +134,5 @@ jobs:
             client_signature_test.exe
             memory_region_test.exe
             PlayerPositionTest.exe
+            ProcessStatusTest.exe
           if-no-files-found: error
