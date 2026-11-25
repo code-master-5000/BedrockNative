@@ -1,0 +1,21 @@
+[1mdiff --git a/.github/workflows/build.yml b/.github/workflows/build.yml[m
+[1mindex f6511e8..04d4439 100644[m
+[1m--- a/.github/workflows/build.yml[m
+[1m+++ b/.github/workflows/build.yml[m
+[36m@@ -95,6 +95,10 @@[m [mjobs:[m
+         shell: cmd[m
+         run: cl /nologo /EHsc /std:c++17 memory_region_test.cpp /Fe:memory_region_test.exe[m
+ [m
+[32m+[m[32m      - name: Build player position test[m
+[32m+[m[32m        shell: cmd[m
+[32m+[m[32m        run: cl /nologo /EHsc /std:c++17 PlayerPositionTest.cpp MemoryReader.cpp /Fe:PlayerPositionTest.exe[m
+[32m+[m
+       - name: Upload executables[m
+         uses: actions/upload-artifact@v4[m
+         with:[m
+[36m@@ -116,4 +120,5 @@[m [mjobs:[m
+             pointer_module_test.exe[m
+             client_signature_test.exe[m
+             memory_region_test.exe[m
+[32m+[m[32m            PlayerPositionTest.exe[m
+           if-no-files-found: error[m

@@ -328,7 +328,6 @@ int main()
                   << (address - base)
                   << "\n";
     }
-
     reader.Detach();
 
     std::cout << "SCAN COMPLETE!\n";

@@ -2,6 +2,7 @@
 #include "StateVectorDiscovery.h"
 
 #include <limits>
+#include <iostream>
 
 namespace
 {
@@ -16,6 +17,7 @@ namespace
     constexpr size_t MaxComponentPools = 4096;
 
     constexpr uint32_t StateVectorHash = 0x1B5D5238;
+    constexpr uint32_t AABBShapeHash = 0xBAC1B3CF;
 
     bool AddOffset(
         uintptr_t base,
@@ -123,8 +125,9 @@ bool FindStateVectorStorage(
         return false;
 
     uintptr_t foundStorage = 0;
+    bool foundAABBShape = false;
 
-    // Search for StateVectorComponent.
+    // Search for StateVectorComponent and AABBShapeComponent.
     for (size_t i = 0; i < count; ++i)
     {
         uintptr_t entry = 0;
@@ -149,6 +152,26 @@ bool FindStateVectorStorage(
         if (!reader.Read(hashAddress, &hash, sizeof(hash)))
             return false;
 
+        if (hash == AABBShapeHash)
+        {
+            uintptr_t aabbStorage = 0;
+
+            if (!reader.Read(
+                    storageAddress,
+                    &aabbStorage,
+                    sizeof(aabbStorage)) ||
+                aabbStorage == 0)
+            {
+                return false;
+            }
+
+            std::cout
+                << "AABBShapeComponent candidate storage: 0x"
+                << std::hex << aabbStorage << std::dec << "\\n";
+
+            foundAABBShape = true;
+        }
+
         if (hash != StateVectorHash)
             continue;
 
@@ -163,6 +186,12 @@ bool FindStateVectorStorage(
         {
             return false;
         }
+    }
+
+    if (!foundAABBShape)
+    {
+        std::cout
+            << "AABBShapeComponent candidate pool NOT FOUND.\\n";
     }
 
     if (foundStorage == 0)
