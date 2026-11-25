@@ -26,6 +26,22 @@ bool MemoryReader::IsAttached() const
     return process_ != nullptr;
 }
 
+ProcessStatus MemoryReader::GetProcessStatus() const
+{
+    if (process_ == nullptr)
+        return ProcessStatus::Unknown;
+
+    DWORD result = WaitForSingleObject(process_, 0);
+
+    if (result == WAIT_TIMEOUT)
+        return ProcessStatus::Running;
+
+    if (result == WAIT_OBJECT_0)
+        return ProcessStatus::Exited;
+
+    return ProcessStatus::Unknown;
+}
+
 uintptr_t MemoryReader::GetBaseAddress() const
 {
     return baseAddress_;
@@ -71,7 +87,8 @@ bool MemoryReader::Attach()
 
     process_ = OpenProcess(
         PROCESS_QUERY_LIMITED_INFORMATION |
-        PROCESS_VM_READ,
+        PROCESS_VM_READ |
+        SYNCHRONIZE,
         FALSE,
         pid
     );

@@ -4,6 +4,13 @@
 #include <windows.h>
 #include <cstdint>
 
+enum class ProcessStatus
+{
+    Running,
+    Exited,
+    Unknown
+};
+
 class MemoryReader
 {
 public:
@@ -16,6 +23,7 @@ public:
     void Detach();
 
     bool IsAttached() const;
+    ProcessStatus GetProcessStatus() const;
     uintptr_t GetBaseAddress() const;
 
     bool Read(
