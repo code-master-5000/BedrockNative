@@ -217,17 +217,16 @@ bool EntityTracker::ReadPosition(
         sizeof(position));
 }
 
+
 bool EntityTracker::Enumerate(
     std::vector<TrackedEntity>& entities,
     EntityScanStats& stats
 ) const
 {
-    entities.clear();
     stats = {};
 
     Layout layout{};
 
-    // Refresh the layout for every scan.
     if (!ReadLayout(layout))
         return false;
 
@@ -237,6 +236,8 @@ bool EntityTracker::Enumerate(
 
     std::vector<TrackedEntity> results;
     EntityScanStats currentStats{};
+
+    bool complete = true;
 
     for (size_t slot = 0; slot < entityCount; ++slot)
     {
@@ -250,19 +251,19 @@ bool EntityTracker::Enumerate(
                 &packedId,
                 sizeof(packedId)))
         {
+            stats = currentStats;
             return false;
         }
 
-        // Skip EnTT tombstones.
         if ((packedId >> 18) == TombstoneVersion)
             continue;
 
         ++currentStats.nonTombstoneEntries;
 
-        // Validate full ID and packed position.
         if (!ValidateMapping(layout, packedId, slot))
         {
             ++currentStats.invalidMappings;
+            complete = false;
             continue;
         }
 
@@ -271,10 +272,10 @@ bool EntityTracker::Enumerate(
         if (!ReadPosition(layout, slot, position))
         {
             ++currentStats.positionReadFailures;
+            complete = false;
             continue;
         }
 
-        // Check that the entity wasn't replaced.
         uint32_t confirmId = 0;
 
         if (!reader_.Read(
@@ -284,6 +285,7 @@ bool EntityTracker::Enumerate(
             confirmId != packedId)
         {
             ++currentStats.changedDuringRead;
+            complete = false;
             continue;
         }
 
@@ -294,8 +296,14 @@ bool EntityTracker::Enumerate(
         });
     }
 
-    entities.swap(results);
     stats = currentStats;
+
+    // Never publish an incomplete snapshot.
+    if (!complete)
+        return false;
+
+    // Replace the previous snapshot only after success.
+    entities.swap(results);
 
     return true;
 }
