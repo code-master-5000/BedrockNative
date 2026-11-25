@@ -97,7 +97,7 @@ jobs:
 
       - name: Build player position test
         shell: cmd
-        run: cl /nologo /EHsc /std:c++17 PlayerPositionTest.cpp EntityTracker.cpp MemoryReader.cpp ModuleScanner.cpp SignatureScanner.cpp /Fe:PlayerPositionTest.exe
+        run: cl /nologo /EHsc /std:c++17 PlayerPositionTest.cpp EntityTracker.cpp StateVectorDiscovery.cpp MemoryReader.cpp ModuleScanner.cpp SignatureScanner.cpp /Fe:PlayerPositionTest.exe
 
 
       - name: Build EntityCache tests

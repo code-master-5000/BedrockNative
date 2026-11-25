@@ -3,6 +3,7 @@
 #include "RelativeAddress.h"
 #include "PointerResolver.h"
 #include "EntityTracker.h"
+#include "StateVectorDiscovery.h"
 
 #include <cstdint>
 #include <iomanip>
@@ -139,77 +140,22 @@ int main()
     }
 
 
-    // Find EnTT component pools through the local EntityRegistry.
-    uintptr_t entityRegistry = 0;
+    // Discover StateVectorComponent using our reusable module.
+    uintptr_t stateVectorStorage = 0;
+    size_t poolCount = 0;
 
-    if (!reader.Read(clientInstance + 0x268,
-                     &entityRegistry, sizeof(entityRegistry)) ||
-        entityRegistry == 0)
+    if (!FindStateVectorStorage(
+            reader,
+            clientInstance,
+            stateVectorStorage,
+            poolCount))
     {
-        std::cout << "EntityRegistry not found.\n";
+        std::cout << "StateVectorComponent discovery failed.\n";
         return 1;
     }
-
-    // Offset observed in Minecraft 1.26.65.1.
-    uintptr_t pools = entityRegistry + 0x78;
-
-    uintptr_t packedBegin = 0;
-    uintptr_t packedEnd = 0;
-    uintptr_t packedCapacity = 0;
-
-    if (!reader.Read(pools + 0x20,
-                     &packedBegin, sizeof(packedBegin)) ||
-        !reader.Read(pools + 0x28,
-                     &packedEnd, sizeof(packedEnd)) ||
-        !reader.Read(pools + 0x30,
-                     &packedCapacity, sizeof(packedCapacity)) ||
-        packedBegin == 0 ||
-        packedEnd < packedBegin ||
-        packedCapacity < packedEnd ||
-        (packedEnd - packedBegin) % 32 != 0 ||
-        (packedEnd - packedBegin) / 32 > 4096)
-    {
-        std::cout << "Invalid component-pool layout.\n";
-        return 1;
-    }
-
-    size_t entryCount = (packedEnd - packedBegin) / 32;
 
     std::cout << "Component pools: "
-              << entryCount << " entries\n";
-
-    uintptr_t stateVectorStorage = 0;
-
-    for (size_t i = 0; i < entryCount; ++i)
-    {
-        uintptr_t entry = packedBegin + i * 32;
-        uint32_t hash = 0;
-
-        if (!reader.Read(entry + 0x08, &hash, sizeof(hash)))
-        {
-            std::cout << "Could not read component hash.\n";
-            return 1;
-        }
-
-        if (hash == 0x1B5D5238)
-        {
-            if (stateVectorStorage != 0 ||
-                !reader.Read(entry + 0x10,
-                             &stateVectorStorage,
-                             sizeof(stateVectorStorage)) ||
-                stateVectorStorage == 0)
-            {
-                std::cout << "Invalid or duplicate StateVectorComponent.\n";
-                return 1;
-            }
-        }
-    }
-
-    if (stateVectorStorage == 0)
-    {
-        std::cout << "StateVectorComponent storage not found.\n";
-        return 1;
-    }
+              << poolCount << " entries\n";
 
     std::cout << "StateVectorComponent storage: 0x"
               << std::hex << stateVectorStorage
