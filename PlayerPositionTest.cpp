@@ -3,8 +3,10 @@
 #include "RelativeAddress.h"
 #include "PointerResolver.h"
 #include "EntityTracker.h"
+#include "EntityCache.h"
 #include "StateVectorDiscovery.h"
 
+#include <conio.h>
 #include <cstdint>
 #include <iomanip>
 #include <iostream>
@@ -287,49 +289,130 @@ int main()
         return 1;
     }
 
+
+    // Create our entity cache.
+    EntityCache cache;
+
     std::vector<TrackedEntity> entities;
     EntityScanStats stats{};
 
-    if (!tracker.Enumerate(entities, stats))
+    std::cout << "\n=== CONTINUOUS ENTITY TRACKING ===\n";
+    std::cout << "Press Q to stop tracking.\n";
+
+    size_t scanCount = 0;
+    size_t consecutiveFailures = 0;
+
+    while (true)
     {
-        std::cout << "Entity enumeration failed.\n";
-        return 1;
+        // Check whether Minecraft is still running.
+        ProcessStatus processStatus =
+            reader.GetProcessStatus();
+
+        if (processStatus == ProcessStatus::Exited)
+        {
+            std::cout << "\nMinecraft has closed.\n";
+            break;
+        }
+
+        if (processStatus == ProcessStatus::Unknown)
+        {
+            std::cout << "\nCannot determine process status.\n";
+            break;
+        }
+
+        // Allow the user to stop tracking.
+        if (_kbhit())
+        {
+            int key = _getch();
+
+            if (key == 'q' || key == 'Q')
+            {
+                std::cout << "\nTracking stopped manually.\n";
+                break;
+            }
+        }
+
+        // Scan entities.
+        if (!tracker.Enumerate(entities, stats))
+        {
+            ++consecutiveFailures;
+
+            // Avoid flooding the console with errors.
+            if (consecutiveFailures == 1 ||
+                consecutiveFailures % 20 == 0)
+            {
+                std::cout
+                    << "\nScan rejected. Previous cache retained.\n"
+                    << "Consecutive failures: "
+                    << consecutiveFailures << "\n"
+                    << "Invalid mappings: "
+                    << stats.invalidMappings << "\n"
+                    << "Position failures: "
+                    << stats.positionReadFailures << "\n"
+                    << "Changed during read: "
+                    << stats.changedDuringRead << "\n";
+            }
+
+            Sleep(250);
+            continue;
+        }
+
+        consecutiveFailures = 0;
+        ++scanCount;
+
+        // Only update the cache with a complete snapshot.
+        EntityChanges changes = cache.Update(entities);
+
+        // Report newly appeared entities.
+        for (const auto& entity : changes.appeared)
+        {
+            std::cout << "\n+ Entity appeared: 0x"
+                      << std::hex
+                      << std::setw(8)
+                      << std::setfill('0')
+                      << entity.id
+                      << std::setfill(' ')
+                      << std::dec
+                      << " at "
+                      << entity.position.x << ", "
+                      << entity.position.y << ", "
+                      << entity.position.z
+                      << "\n";
+        }
+
+        // Report disappeared entities.
+        for (const auto& entity : changes.disappeared)
+        {
+            std::cout << "\n- Entity disappeared: 0x"
+                      << std::hex
+                      << std::setw(8)
+                      << std::setfill('0')
+                      << entity.id
+                      << std::setfill(' ')
+                      << std::dec
+                      << "\n";
+        }
+
+        // Print a status update every 20 successful scans.
+        if (scanCount % 20 == 0)
+        {
+            std::cout
+                << "\rScans: " << scanCount
+                << " | Cached entities: " << cache.Count()
+                << " | Live entries: "
+                << stats.nonTombstoneEntries
+                << std::flush;
+        }
+
+        Sleep(250);
     }
 
-    std::cout << "\n=== LIVE ECS ENTITIES ===\n";
+    // Release cached memory and the process handle.
+    cache.Reset();
+    reader.Detach();
 
-    for (const auto& entity : entities)
-    {
-        std::cout << "Slot " << std::dec << entity.slot
-                  << ": Entity ID 0x"
-                  << std::hex
-                  << std::setw(8)
-                  << std::setfill('0')
-                  << entity.id
-                  << std::setfill(' ')
-                  << std::dec << "\n";
-
-        std::cout << "  Position: "
-                  << entity.position.x << ", "
-                  << entity.position.y << ", "
-                  << entity.position.z << "\n";
-    }
-
-    std::cout << "\n=== ENTITY SCAN STATISTICS ===\n";
-    std::cout << "Non-tombstone entries: "
-              << stats.nonTombstoneEntries << "\n";
-
-    std::cout << "Successfully tracked: "
-              << entities.size() << "\n";
-
-    std::cout << "Invalid mappings: "
-              << stats.invalidMappings << "\n";
-
-    std::cout << "Position read failures: "
-              << stats.positionReadFailures << "\n";
-
-    std::cout << "Changed during read: "
-              << stats.changedDuringRead << "\n";
+    std::cout << "\nEntity cache cleared.\n";
+    std::cout << "Tracking stopped.\n";
 
     return 0;
 }
