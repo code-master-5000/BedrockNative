@@ -12,6 +12,30 @@
 #include <iostream>
 #include <vector>
 
+
+constexpr uint32_t Fnv1a32(const char* text)
+{
+    uint32_t hash = 2166136261u;
+
+    while (*text)
+    {
+        hash ^= static_cast<unsigned char>(*text++);
+        hash *= 16777619u;
+    }
+
+    return hash;
+}
+
+// Verify against the known StateVectorComponent hash.
+static_assert(
+    Fnv1a32("StateVectorComponent") == 0x1B5D5238,
+    "Unexpected EnTT hash."
+);
+
+constexpr uint32_t AabbShapeComponentHash =
+    Fnv1a32("AABBShapeComponent");
+
+
 struct Vec3
 {
     float x;
@@ -162,6 +186,32 @@ int main()
     std::cout << "StateVectorComponent storage: 0x"
               << std::hex << stateVectorStorage
               << std::dec << "\n";
+
+    // Discover AABBShapeComponent.
+    uintptr_t aabbShapeStorage = 0;
+    size_t aabbPoolCount = 0;
+
+    std::cout << "AABBShapeComponent hash candidate: 0x"
+              << std::hex << AabbShapeComponentHash
+              << std::dec << "\n";
+
+    if (FindComponentStorage(
+            reader,
+            clientInstance,
+            AabbShapeComponentHash,
+            aabbShapeStorage,
+            aabbPoolCount))
+    {
+        std::cout << "AABBShapeComponent storage: 0x"
+                  << std::hex << aabbShapeStorage
+                  << std::dec << "\n";
+    }
+    else
+    {
+        std::cout
+            << "AABBShapeComponent pool not found "
+            << "(or discovery failed).\n";
+    }
 
     // Resolve this entity's component index using EnTT's sparse set.
     constexpr uint32_t entityMask = 0x3FFFF;
