@@ -7,6 +7,7 @@
 #include <dxgi.h>
 #include <cwchar>
 #include <iostream>
+#include <cstdio>
 
 #include "imgui.h"
 #include "imgui_impl_win32.h"
@@ -28,6 +29,7 @@ static ID3D11RenderTargetView* renderTarget = nullptr;
 // Menu state
 static bool menuOpen = false;
 static int selectedTab = 0;
+static bool showHud = true;
 
 static bool esp = false;
 static bool hitboxes = true;
@@ -325,6 +327,8 @@ void DrawMenu()
 
             ImGui::Text("Right Shift: Menu");
             ImGui::Text("End: Exit");
+            ImGui::Separator();
+            ImGui::Checkbox("Show HUD", &showHud);
         }
 
         ImGui::Separator();
@@ -336,6 +340,70 @@ void DrawMenu()
     }
 
     ImGui::End();
+}
+
+
+// ============================================================
+// LIVE HUD
+// ============================================================
+
+void DrawHud()
+{
+    if (!showHud)
+        return;
+
+    DWORD minecraftPid = 0;
+
+    if (IsWindow(minecraft))
+    {
+        GetWindowThreadProcessId(
+            minecraft,
+            &minecraftPid
+        );
+    }
+
+    char hudText[160]{};
+
+    std::snprintf(
+        hudText,
+        sizeof(hudText),
+        "BedrockNative | Minecraft PID: %lu | Overlay: %.0f FPS",
+        static_cast<unsigned long>(minecraftPid),
+        ImGui::GetIO().Framerate
+    );
+
+    ImDrawList* draw = ImGui::GetForegroundDrawList();
+
+    const ImVec2 position(16.0f, 16.0f);
+    const ImVec2 textSize = ImGui::CalcTextSize(hudText);
+
+    const ImVec2 bottomRight(
+        position.x + textSize.x + 24.0f,
+        position.y + textSize.y + 16.0f
+    );
+
+    // Dark HUD background.
+    draw->AddRectFilled(
+        position,
+        bottomRight,
+        IM_COL32(20, 25, 36, 235),
+        6.0f
+    );
+
+    // Blue outline.
+    draw->AddRect(
+        position,
+        bottomRight,
+        IM_COL32(62, 126, 210, 220),
+        6.0f
+    );
+
+    // Live status text.
+    draw->AddText(
+        ImVec2(position.x + 12.0f, position.y + 8.0f),
+        IM_COL32(235, 240, 250, 255),
+        hudText
+    );
 }
 
 LRESULT CALLBACK WindowProc(
@@ -529,6 +597,8 @@ int main()
         ImGui_ImplDX11_NewFrame();
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
+
+        DrawHud();
 
         bool wasOpen = menuOpen;
 
