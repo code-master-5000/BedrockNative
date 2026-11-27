@@ -1,0 +1,29 @@
+name: BedrockNative Overlay Build
+
+on:
+  push:
+    paths:
+      - "Overlay/**"
+      - ".github/workflows/overlay.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S Overlay -B build/overlay -A x64
+
+      - name: Build
+        run: cmake --build build/overlay --config Release --parallel
+
+      - name: Upload EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: BedrockNative-Overlay-Windows
+          path: build/overlay/Release/BedrockNativeOverlay.exe
+          if-no-files-found: error
