@@ -14,6 +14,10 @@ set(IMGUI "${imgui_SOURCE_DIR}")
 
 add_executable(BedrockNativeOverlay
     main.cpp
+    GameTelemetry.cpp
+    ../MemoryReader.cpp
+    ../EntityTracker.cpp
+    ../StateVectorDiscovery.cpp
     "${IMGUI}/imgui.cpp"
     "${IMGUI}/imgui_draw.cpp"
     "${IMGUI}/imgui_tables.cpp"
@@ -23,6 +27,7 @@ add_executable(BedrockNativeOverlay
 )
 
 target_include_directories(BedrockNativeOverlay PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/.."
     "${IMGUI}"
     "${IMGUI}/backends"
 )

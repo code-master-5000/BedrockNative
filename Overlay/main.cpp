@@ -7,6 +7,7 @@
 #include <dxgi.h>
 #include <cwchar>
 #include <iostream>
+#include "GameTelemetry.h"
 #include <cstdio>
 
 #include "imgui.h"
@@ -31,6 +32,7 @@ static bool menuOpen = false;
 static int selectedTab = 0;
 static int selectedModule = 0;
 static bool showHud = true;
+static GameTelemetry gameTelemetry;
 
 static bool esp = false;
 static bool hitboxes = true;
@@ -355,7 +357,7 @@ void DrawQuickAccessBar()
 
     ImVec2 top(
         16.0f,
-        showHud ? 56.0f : 16.0f
+        showHud ? 96.0f : 16.0f
     );
 
     ImVec2 bottom(
@@ -389,6 +391,64 @@ void DrawQuickAccessBar()
         ImVec2(top.x + 12, top.y + first.y + 10),
         IM_COL32(160, 185, 220, 255),
         help
+    );
+}
+
+
+void DrawGameTelemetry()
+{
+    if (!showHud)
+        return;
+
+    const auto live = gameTelemetry.Get();
+
+    char label[256]{};
+
+    if (live.hasPosition)
+    {
+        std::snprintf(
+            label,
+            sizeof(label),
+            "XYZ: %.2f, %.2f, %.2f  |  Entities: %zu",
+            live.x,
+            live.y,
+            live.z,
+            live.entityCount
+        );
+    }
+    else
+    {
+        std::snprintf(
+            label,
+            sizeof(label),
+            "Minecraft data: %s",
+            live.status.c_str()
+        );
+    }
+
+    ImDrawList* draw =
+        ImGui::GetForegroundDrawList();
+
+    ImVec2 text = ImGui::CalcTextSize(label);
+
+    ImVec2 top(16.0f, 56.0f);
+
+    ImVec2 bottom(
+        top.x + text.x + 24.0f,
+        top.y + text.y + 16.0f
+    );
+
+    draw->AddRectFilled(
+        top,
+        bottom,
+        IM_COL32(20, 25, 36, 235),
+        6.0f
+    );
+
+    draw->AddText(
+        ImVec2(top.x + 12.0f, top.y + 8.0f),
+        IM_COL32(235, 240, 250, 255),
+        label
     );
 }
 
@@ -663,6 +723,8 @@ int main()
 
     std::cout << "BedrockNative overlay started\n";
 
+    gameTelemetry.Start();
+
     MSG msg{};
     bool running = true;
     bool shiftWasDown = false;
@@ -836,6 +898,7 @@ int main()
         ImGui::NewFrame();
 
         DrawHud();
+        DrawGameTelemetry();
 
         bool wasOpen = menuOpen;
 
@@ -872,6 +935,8 @@ int main()
 
         swapChain->Present(1, 0);
     }
+
+    gameTelemetry.Stop();
 
     ImGui_ImplDX11_Shutdown();
     ImGui_ImplWin32_Shutdown();
