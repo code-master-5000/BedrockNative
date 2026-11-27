@@ -29,6 +29,7 @@ static ID3D11RenderTargetView* renderTarget = nullptr;
 // Menu state
 static bool menuOpen = false;
 static int selectedTab = 0;
+static int selectedModule = 0;
 static bool showHud = true;
 
 static bool esp = false;
@@ -230,6 +231,167 @@ void UpdateInputMode()
 }
 
 // Draw clickable menu
+
+// ============================================================
+// KEYBOARD MODULE NAVIGATION
+// ============================================================
+
+struct ModuleEntry
+{
+    const char* name;
+    bool* enabled;
+};
+
+int GetCurrentModules(ModuleEntry (&items)[4])
+{
+    if (selectedTab == 0)
+    {
+        items[0] = {"ESP", &esp};
+        items[1] = {"Hitboxes", &hitboxes};
+        items[2] = {"X-ray", &xray};
+        return 3;
+    }
+
+    if (selectedTab == 1)
+    {
+        items[0] = {"Freecam", &freecam};
+        items[1] = {"Fly", &fly};
+        items[2] = {"Speed", &speed};
+        return 3;
+    }
+
+    if (selectedTab == 4)
+    {
+        items[0] = {"Show HUD", &showHud};
+        return 1;
+    }
+
+    return 0;
+}
+
+bool KeyPressedOnce(int key, bool& wasDown)
+{
+    bool down = (GetAsyncKeyState(key) & 0x8000) != 0;
+    bool pressed = down && !wasDown;
+    wasDown = down;
+    return pressed;
+}
+
+void DrawModuleRows()
+{
+    ModuleEntry items[4]{};
+    int count = GetCurrentModules(items);
+
+    for (int i = 0; i < count; ++i)
+    {
+        char label[128]{};
+
+        std::snprintf(
+            label,
+            sizeof(label),
+            "%s  [%s]##module_%d_%d",
+            items[i].name,
+            *items[i].enabled ? "ON" : "OFF",
+            selectedTab,
+            i
+        );
+
+        if (ImGui::Selectable(
+                label,
+                selectedModule == i,
+                ImGuiSelectableFlags_None,
+                ImVec2(0, 30)
+            ))
+        {
+            selectedModule = i;
+            *items[i].enabled = !*items[i].enabled;
+        }
+    }
+}
+
+// Visible even when the main menu is minimised.
+void DrawQuickAccessBar()
+{
+    if (menuOpen)
+        return;
+
+    const char* categories[] = {
+        "Visuals", "Movement", "Combat", "World", "Settings"
+    };
+
+    ModuleEntry items[4]{};
+    int count = GetCurrentModules(items);
+
+    char status[192]{};
+
+    if (count > 0 && selectedModule < count)
+    {
+        std::snprintf(
+            status,
+            sizeof(status),
+            "%s  >  %s: %s",
+            categories[selectedTab],
+            items[selectedModule].name,
+            *items[selectedModule].enabled ? "ON" : "OFF"
+        );
+    }
+    else
+    {
+        std::snprintf(
+            status,
+            sizeof(status),
+            "%s  >  No modules yet",
+            categories[selectedTab]
+        );
+    }
+
+    const char* help =
+        "Left/Right: Category  Up/Down: Module  =: Toggle";
+
+    ImVec2 first = ImGui::CalcTextSize(status);
+    ImVec2 second = ImGui::CalcTextSize(help);
+
+    float width = first.x > second.x ? first.x : second.x;
+
+    ImVec2 top(
+        16.0f,
+        showHud ? 56.0f : 16.0f
+    );
+
+    ImVec2 bottom(
+        top.x + width + 24.0f,
+        top.y + first.y + second.y + 22.0f
+    );
+
+    ImDrawList* draw = ImGui::GetForegroundDrawList();
+
+    draw->AddRectFilled(
+        top,
+        bottom,
+        IM_COL32(19, 24, 35, 235),
+        6.0f
+    );
+
+    draw->AddRect(
+        top,
+        bottom,
+        IM_COL32(65, 135, 220, 220),
+        6.0f
+    );
+
+    draw->AddText(
+        ImVec2(top.x + 12, top.y + 6),
+        IM_COL32(245, 245, 255, 255),
+        status
+    );
+
+    draw->AddText(
+        ImVec2(top.x + 12, top.y + first.y + 10),
+        IM_COL32(160, 185, 220, 255),
+        help
+    );
+}
+
 void DrawMenu()
 {
     ImGui::SetNextWindowSize(
@@ -269,6 +431,7 @@ void DrawMenu()
                 selectedTab == i
             )) {
                 selectedTab = i;
+                selectedModule = 0;
             }
         }
 
@@ -281,9 +444,7 @@ void DrawMenu()
             ImGui::Text("VISUALS");
             ImGui::Separator();
 
-            ImGui::Checkbox("ESP", &esp);
-            ImGui::Checkbox("Hitboxes", &hitboxes);
-            ImGui::Checkbox("X-ray", &xray);
+            DrawModuleRows();
 
             ImGui::SliderFloat(
                 "Box Thickness",
@@ -297,9 +458,7 @@ void DrawMenu()
             ImGui::Text("MOVEMENT");
             ImGui::Separator();
 
-            ImGui::Checkbox("Freecam", &freecam);
-            ImGui::Checkbox("Fly", &fly);
-            ImGui::Checkbox("Speed", &speed);
+            DrawModuleRows();
 
             ImGui::SliderFloat(
                 "Speed Multiplier",
@@ -325,10 +484,13 @@ void DrawMenu()
             ImGui::Text("SETTINGS");
             ImGui::Separator();
 
-            ImGui::Text("Right Shift: Menu");
+            ImGui::Text("Right Shift: Open / close");
+            ImGui::Text("-: Minimise menu");
+            ImGui::Text("Arrow keys: Navigate");
+            ImGui::Text("=: Toggle selected module");
             ImGui::Text("End: Exit");
             ImGui::Separator();
-            ImGui::Checkbox("Show HUD", &showHud);
+            DrawModuleRows();
         }
 
         ImGui::Separator();
@@ -504,6 +666,12 @@ int main()
     MSG msg{};
     bool running = true;
     bool shiftWasDown = false;
+    bool leftWasDown = false;
+    bool rightWasDown = false;
+    bool upWasDown = false;
+    bool downWasDown = false;
+    bool equalsWasDown = false;
+    bool minusWasDown = false;
 
     ULONGLONG nextSearch = 0;
     RECT lastRect{};
@@ -526,7 +694,7 @@ int main()
         if (!running)
             break;
 
-        if (GetAsyncKeyState(VK_END) & 1)
+        if (GetAsyncKeyState(VK_END) & 0x8000)
             break;
 
         if (!IsWindow(minecraft) ||
@@ -594,6 +762,75 @@ int main()
 
         shiftWasDown = shiftDown;
 
+        // Keyboard navigation works with the full menu
+        // open OR minimised.
+
+        bool leftPressed =
+            KeyPressedOnce(VK_LEFT, leftWasDown);
+
+        bool rightPressed =
+            KeyPressedOnce(VK_RIGHT, rightWasDown);
+
+        bool upPressed =
+            KeyPressedOnce(VK_UP, upWasDown);
+
+        bool downPressed =
+            KeyPressedOnce(VK_DOWN, downWasDown);
+
+        // Main keyboard Equals/Plus key.
+        bool equalsPressed =
+            KeyPressedOnce(VK_OEM_PLUS, equalsWasDown);
+
+        // Main keyboard Minus key.
+        bool minusPressed =
+            KeyPressedOnce(VK_OEM_MINUS, minusWasDown);
+
+        if (leftPressed)
+        {
+            selectedTab = (selectedTab + 4) % 5;
+            selectedModule = 0;
+        }
+
+        if (rightPressed)
+        {
+            selectedTab = (selectedTab + 1) % 5;
+            selectedModule = 0;
+        }
+
+        ModuleEntry modules[4]{};
+        int moduleCount = GetCurrentModules(modules);
+
+        if (moduleCount > 0)
+        {
+            if (upPressed)
+            {
+                selectedModule =
+                    (selectedModule + moduleCount - 1)
+                    % moduleCount;
+            }
+
+            if (downPressed)
+            {
+                selectedModule =
+                    (selectedModule + 1)
+                    % moduleCount;
+            }
+
+            if (equalsPressed)
+            {
+                bool* value = modules[selectedModule].enabled;
+                *value = !*value;
+            }
+        }
+
+        if (minusPressed && menuOpen)
+        {
+            menuOpen = false;
+            UpdateInputMode();
+        }
+
+
+
         ImGui_ImplDX11_NewFrame();
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
@@ -604,6 +841,8 @@ int main()
 
         if (menuOpen)
             DrawMenu();
+        else
+            DrawQuickAccessBar();
 
         ImGui::Render();
 
