@@ -64,13 +64,27 @@ bool ResolveClient(
 
     uintptr_t game = node;
     uintptr_t head = 0;
+    uintptr_t root = 0;
+    uint64_t clientCount = 0;
 
     if (!ReadPointer(reader, game + 0x9D0, head))
         return false;
 
+    // Validate the client map before following its root.
+    if (!reader.Read(
+            game + 0x9D8,
+            &clientCount,
+            sizeof(clientCount)
+        ) || clientCount != 1)
+        return false;
+
+    // mapHead points to the root node.
+    if (!ReadPointer(reader, head, root) || root == head)
+        return false;
+
     uintptr_t instance = 0;
 
-    if (!ReadPointer(reader, head + 0x38, instance))
+    if (!ReadPointer(reader, root + 0x38, instance))
         return false;
 
     uintptr_t back = 0;
